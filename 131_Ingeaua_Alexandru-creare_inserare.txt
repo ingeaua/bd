@@ -1,0 +1,493 @@
+CREATE SEQUENCE secv_id_utilizator
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+CREATE SEQUENCE secv_id_playlist
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+CREATE SEQUENCE secv_id_melodie
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+CREATE SEQUENCE secv_id_artist
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+CREATE SEQUENCE secv_id_album
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+CREATE SEQUENCE secv_id_podcast
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+CREATE SEQUENCE secv_id_ep_podcast
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+CREATE SEQUENCE secv_id_asc_podcast
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+CREATE SEQUENCE secv_id_asc_melodie
+START WITH 1
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 999999999
+NOCYCLE
+NOCACHE;
+
+
+CREATE TABLE utilizator(
+    id_utilizator NUMBER(9) CONSTRAINT pk_id_user PRIMARY KEY, 
+    nume VARCHAR2(50) CONSTRAINT null_nume_user NOT NULL,
+    email VARCHAR2(50) CONSTRAINT null_email_user NOT NULL,
+    data_nastere DATE CONSTRAINT null_data_user NOT NULL,
+    tara VARCHAR2(2) CONSTRAINT null_tara_user NOT NULL,
+    CONSTRAINT unq_email_user UNIQUE(email));
+
+
+CREATE TABLE playlist(
+    id_playlist NUMBER(9) CONSTRAINT pk_id_plist PRIMARY KEY,
+    id_creator NUMBER(9) CONSTRAINT null_creator_plist NOT NULL,
+    nume VARCHAR2(50) CONSTRAINT null_nume_plist NOT NULL,
+    CONSTRAINT fk_plist_creator FOREIGN KEY(id_creator) REFERENCES utilizator(id_utilizator) ON DELETE CASCADE);
+
+
+CREATE TABLE album(
+    id_album NUMBER(9) CONSTRAINT pk_id_album PRIMARY KEY,
+    titlu VARCHAR2(50) CONSTRAINT null_nume_album NOT NULL,
+    data_lansare DATE CONSTRAINT null_data_album NOT NULL,
+    casa_discuri VARCHAR2(50));
+
+
+CREATE TABLE melodie(
+    id_melodie NUMBER(9) CONSTRAINT pk_id_song PRIMARY KEY,
+    titlu VARCHAR2(50) CONSTRAINT null_titlu_song NOT NULL,
+    durata NUMBER(3) CONSTRAINT null_durata_song NOT NULL,
+    id_album NUMBER(9) CONSTRAINT fk_song_album REFERENCES album(id_album) ON DELETE CASCADE,
+    gen VARCHAR2(15),
+    data_lansare date,
+    constraint song_lansare CHECK (data_lansare IS NOT NULL AND id_album IS NULL 
+    OR id_album IS NOT NULL AND data_lansare IS NULL));
+
+
+CREATE TABLE artist(
+    id_artist NUMBER(9) CONSTRAINT pk_id_artist PRIMARY KEY,
+    nume VARCHAR2(50) CONSTRAINT null_nume_artist NOT NULL,
+    tara VARCHAR2(2) CONSTRAINT null_tara_artist NOT NULL);
+
+
+CREATE TABLE podcast(
+    id_podcast NUMBER(9) CONSTRAINT pk_id_podcast PRIMARY KEY,
+    nume VARCHAR2(50) CONSTRAINT null_nume_podcast NOT NULL,
+    nume_gazda VARCHAR2(50) CONSTRAINT null_gazda_podcast NOT NULL,
+    limba VARCHAR2(3) CONSTRAINT null_limba_podcast NOT NULL);
+
+
+CREATE TABLE episod_podcast(
+    id_episod NUMBER(9) CONSTRAINT pk_id_episod PRIMARY KEY,
+    id_podcast NUMBER(9) CONSTRAINT null_id_podcast NOT NULL,
+    titlu VARCHAR2(50) CONSTRAINT null_titlu_ep NOT NULL,
+    durata NUMBER(5) CONSTRAINT null_durata_ep NOT NULL,
+    data_aparitie DATE CONSTRAINT null_data_ep NOT NULL,
+    CONSTRAINT fk_episod_podcast FOREIGN KEY (id_podcast) REFERENCES podcast(id_podcast) ON DELETE CASCADE);
+
+CREATE TABLE istoric_ascultare_podcast (
+    id_ascultare_podcast NUMBER(9) CONSTRAINT pk_id_asc_pod PRIMARY KEY,
+    id_utilizator NUMBER(9),
+    id_episod NUMBER(9) CONSTRAINT null_id_asc_pod_podcast NOT NULL,
+    data_ascultare DATE CONSTRAINT null_data_asc_pod NOT NULL,
+    CONSTRAINT fk_asc_pod_id_user FOREIGN KEY (id_utilizator) REFERENCES utilizator(id_utilizator) ON DELETE SET NULL,
+    CONSTRAINT fk_asc_pod_id_ep FOREIGN KEY (id_episod) REFERENCES episod_podcast(id_episod) ON DELETE CASCADE);
+
+
+CREATE TABLE istoric_ascultare_melodie (
+    id_ascultare_melodie NUMBER(9) CONSTRAINT pk_id_asc_song PRIMARY KEY,
+    id_utilizator NUMBER(9), --- poate sa fie null pt ca daca cineva isi sterge contu, nu trebuie sa pierdem info despre faptu
+    --- ca melodia a fost ascultata chiar daca nu o sa mai stim cine a ascultat o,din cauza asta avem si on delete set null
+    id_melodie NUMBER(9) CONSTRAINT null_id_asc_song_song NOT NULL,
+    data_ascultare DATE CONSTRAINT null_data_asc_song NOT NULL,
+    CONSTRAINT fk_asc_song_id_user FOREIGN KEY (id_utilizator) REFERENCES utilizator(id_utilizator) ON DELETE SET NULL,
+    CONSTRAINT fk_asc_song_id_song FOREIGN KEY (id_melodie) REFERENCES melodie(id_melodie) ON DELETE CASCADE);
+
+
+CREATE TABLE utilizator_apreciaza_playlist ( 
+    id_utilizator NUMBER(9) CONSTRAINT fk_userplist_user REFERENCES utilizator(id_utilizator) ON DELETE CASCADE,
+    id_playlist NUMBER(9) CONSTRAINT fk_userplist_plist REFERENCES playlist(id_playlist) ON DELETE CASCADE,
+    CONSTRAINT pk_userplist PRIMARY KEY (id_utilizator, id_playlist));
+
+
+CREATE TABLE utilizator_apreciaza_album (
+    id_utilizator NUMBER(9) CONSTRAINT fk_useralbum_user REFERENCES utilizator(id_utilizator) ON DELETE CASCADE,
+    id_album NUMBER(9) CONSTRAINT fk_useralbum_album REFERENCES album(id_album) ON DELETE CASCADE,
+    CONSTRAINT pk_useralbum PRIMARY KEY (id_utilizator, id_album));
+
+
+CREATE TABLE utilizator_urmareste_artist (
+    id_utilizator NUMBER(9) CONSTRAINT fk_userartist_user REFERENCES utilizator(id_utilizator) ON DELETE CASCADE,
+    id_artist NUMBER(9) CONSTRAINT fk_userartist_artist REFERENCES artist(id_artist) ON DELETE CASCADE,
+    CONSTRAINT pk_userartist PRIMARY KEY (id_utilizator, id_artist));
+
+
+CREATE TABLE artist_lanseaza_album (
+    id_artist NUMBER(9) CONSTRAINT fk_artistalbum_artist REFERENCES artist(id_artist) ON DELETE CASCADE,
+    id_album NUMBER(9) CONSTRAINT fk_artistalbum_album REFERENCES album(id_album) ON DELETE CASCADE,
+    CONSTRAINT pk_artistalbum PRIMARY KEY (id_artist, id_album));
+
+
+CREATE TABLE artist_canta_melodie (
+    id_artist NUMBER(9) CONSTRAINT fk_artistmelodie_artist REFERENCES artist(id_artist) ON DELETE CASCADE,
+    id_melodie NUMBER(9) CONSTRAINT fk_artistmelodie_song REFERENCES melodie(id_melodie) ON DELETE CASCADE,
+    CONSTRAINT pk_artistmelodie PRIMARY KEY (id_artist, id_melodie));
+
+
+CREATE TABLE melodie_apartine_playlist_user (
+    id_melodie NUMBER(9) CONSTRAINT fk_rel3_song REFERENCES melodie(id_melodie) ON DELETE CASCADE,
+    id_playlist NUMBER(9) CONSTRAINT fk_rel3_plist REFERENCES playlist(id_playlist) ON DELETE CASCADE,
+    id_utilizator NUMBER(9) CONSTRAINT fk_rel3_user REFERENCES utilizator(id_utilizator) ON DELETE CASCADE,
+    data_adaugare DATE CONSTRAINT null_rel3_data NOT NULL,
+    CONSTRAINT pk_rel3 PRIMARY KEY (id_melodie, id_playlist, id_utilizator));
+   
+ 
+
+
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'Lil Uzi Vert', 'US');
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'Ian', 'RO');
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'OSCAR', 'RO');
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'Calinacho', 'RO');
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'Pharrell Williams', 'US');
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'Amuly', 'RO');
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'Azteca', 'RO');
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'Future', 'US');
+INSERT INTO artist VALUES (secv_id_artist.NEXTVAL, 'PRNY', 'RO');
+
+INSERT INTO album VALUES (secv_id_album.NEXTVAL, 'Apa', TO_DATE('29-october-2020'), 'OSKY');
+INSERT INTO album VALUES (secv_id_album.NEXTVAL, 'Luv Is Rage 2', TO_DATE('25-august-2017'), 'Atlantic Recording Corporation');
+INSERT INTO album VALUES (secv_id_album.NEXTVAL, 'intr-o buna zi o sa fim bine', TO_DATE('25-november-2021'), 'nobody:nothing');
+INSERT INTO album VALUES (secv_id_album.NEXTVAL, 'Slayer', TO_DATE('21-june-2019'), 'Ocult Records');
+INSERT INTO album VALUES (secv_id_album.NEXTVAL, 'Sin City', TO_DATE('21-december-2020'), 'Seek Music');
+INSERT INTO album VALUES (secv_id_album.NEXTVAL, '616', TO_DATE('8-april-2021'), NULL);
+INSERT INTO album VALUES (secv_id_album.NEXTVAL, 'Pluto x Baby Pluto', TO_DATE('13-november-2020'), 'Atlantic Recording Corporation');
+INSERT INTO album VALUES (secv_id_album.NEXTVAL, 'GEISHA', TO_DATE('23-november-2020'), 'Seek Music');
+
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Tunechi', 242, 1, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Lacrimi', 224, 1, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Aripi', 180, 1, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, '444+222', 247, 2, 'Emo Rap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Neon Guts', 258, 2, 'Emo Rap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'wattba', 221, 3, CONCAT('R', CONCAT(CHR(38), 'B')), NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'rana', 195, 3, CONCAT('R', CONCAT(CHR(38), 'B')), NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Biznis', 134, 4, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Hell-O', 194, 4, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Ne Schimbam', 163, 5, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Vampiri', 199, 5, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Teanc', 189, 5, 'Rap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'A-U-Freestyle', 135, 6, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'UFO', 135, 6, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Lullaby', 261, 7, 'Emo Rap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Patek', 280, 7, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Plastic', 193,  7, 'Rap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Oui, oui', 155, 8, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Rocco', 107, 8, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Orasul Pacatelor', 214, 8, 'Trap', NULL);
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Nefiu', 185, NULL, 'Trap', TO_DATE('19-december-2018'));
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Double Up', 173, NULL, 'Trap', TO_DATE('8-november-2020'));
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Never Recover', 116, NULL, 'Trap', TO_DATE('31-march-2019'));
+INSERT INTO melodie VALUES (secv_id_melodie.NEXTVAL, 'Roceri', 166, NULL, CONCAT('R', CONCAT(CHR(38), 'B')), TO_DATE('30-july-2021'));
+
+INSERT INTO utilizator VALUES (secv_id_utilizator.NEXTVAL, 'ingeaua', 'ingeaua.alexandru@gmail.com', TO_DATE('15-may-2003'), 'RO');
+INSERT INTO utilizator VALUES (secv_id_utilizator.NEXTVAL, 'Ionut45Fotbal3', 'ionutfotbal6@yahoo.com', TO_DATE('5-july-2006'), 'RO');
+INSERT INTO utilizator VALUES (secv_id_utilizator.NEXTVAL, 'MariuS', 'marius.boieriu@gmail.com', TO_DATE('29-december-1997'), 'RO');
+INSERT INTO utilizator VALUES (secv_id_utilizator.NEXTVAL, 'JohnnyTheBoy', 'johndoe@gmail.com', TO_DATE('20-may-2001'), 'UK');
+INSERT INTO utilizator VALUES (secv_id_utilizator.NEXTVAL, 'NelkaMM3', 'nelka.miroslava@gmail.com', TO_DATE('6-june-1976'), 'PL');
+
+INSERT INTO podcast VALUES (secv_id_podcast.NEXTVAL, 'The Joe Rogan Experience', 'Joe Rogan', 'ENG');
+INSERT INTO podcast VALUES (secv_id_podcast.NEXTVAL, 'Mind Architect', 'Mind Architect', 'RUM');
+INSERT INTO podcast VALUES (secv_id_podcast.NEXTVAL, CONCAT('Fain ', CONCAT(CHR(38), 'Simplu Podcast')), 'Mihai Morar', 'RUM');
+INSERT INTO podcast VALUES (secv_id_podcast.NEXTVAL, 'Huberman Lab', 'Scicomm Media', 'ENG');
+INSERT INTO podcast VALUES (secv_id_podcast.NEXTVAL, 'Psihologi la Cafea', 'Cristina Ursu', 'RUM');
+
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 1, '#1976 - James Fox', 8917, TO_DATE('26-april-2023'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 1, '#1889 - Dr. Phil', 12267, TO_DATE('28-october-2022'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 2, 'Introducere in Arhitectura Cerebrala', 1241, TO_DATE('1-november-2019'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 2, 'Cum sa imbatranesti frumos', 1608, TO_DATE('5-june-2020'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 3, 'CUM SA FACI BANI IN CRIZA', 6830, TO_DATE('8-april-2022'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 3, 'DECLARATIE PENTRU VIATA. GEORGE BALTA', 4123, TO_DATE('29-july-2021'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 4, 'How to stop Headaches', 8760, TO_DATE('6-february-2023'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 4, 'Understand and improve memory', 7800, TO_DATE('16-may-2022'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 5, 'Anxietate', 1295, TO_DATE('20-march-2023'));
+INSERT INTO episod_podcast VALUES (secv_id_ep_podcast.NEXTVAL, 5, 'Hipnoza', 1526, TO_DATE('22-june-2022'));
+
+INSERT INTO playlist VALUES (secv_id_playlist.NEXTVAL, 1, 'osky');
+INSERT INTO playlist VALUES (secv_id_playlist.NEXTVAL, 1, 'musique');
+INSERT INTO playlist VALUES (secv_id_playlist.NEXTVAL, 2, 'RandBBBB');
+INSERT INTO playlist VALUES (secv_id_playlist.NEXTVAL, 4, 'party songs');
+INSERT INTO playlist VALUES (secv_id_playlist.NEXTVAL, 5, 'LUV is luv');
+
+INSERT INTO artist_lanseaza_album VALUES(3, 1);
+INSERT INTO artist_lanseaza_album VALUES(1, 2);
+INSERT INTO artist_lanseaza_album VALUES(4, 3);
+INSERT INTO artist_lanseaza_album VALUES(2, 4);
+INSERT INTO artist_lanseaza_album VALUES(3, 5);
+INSERT INTO artist_lanseaza_album VALUES(6, 5);
+INSERT INTO artist_lanseaza_album VALUES(7, 6);
+INSERT INTO artist_lanseaza_album VALUES(1, 7);
+INSERT INTO artist_lanseaza_album VALUES(8, 7);
+INSERT INTO artist_lanseaza_album VALUES(9, 8);
+
+INSERT INTO artist_canta_melodie VALUES(2, 1);
+INSERT INTO artist_canta_melodie VALUES(3, 1);
+INSERT INTO artist_canta_melodie VALUES(3, 2);
+INSERT INTO artist_canta_melodie VALUES(3, 3);
+INSERT INTO artist_canta_melodie VALUES(6, 3);
+INSERT INTO artist_canta_melodie VALUES(1, 4);
+INSERT INTO artist_canta_melodie VALUES(1, 5);
+INSERT INTO artist_canta_melodie VALUES(5, 5);
+INSERT INTO artist_canta_melodie VALUES(4, 6);
+INSERT INTO artist_canta_melodie VALUES(4, 7);
+INSERT INTO artist_canta_melodie VALUES(2, 8);
+INSERT INTO artist_canta_melodie VALUES(2, 9);
+INSERT INTO artist_canta_melodie VALUES(3, 10);
+INSERT INTO artist_canta_melodie VALUES(6, 10);
+INSERT INTO artist_canta_melodie VALUES(3, 11);
+INSERT INTO artist_canta_melodie VALUES(6, 11);
+INSERT INTO artist_canta_melodie VALUES(3, 12);
+INSERT INTO artist_canta_melodie VALUES(6, 12);
+INSERT INTO artist_canta_melodie VALUES(7, 13);
+INSERT INTO artist_canta_melodie VALUES(7, 14);
+INSERT INTO artist_canta_melodie VALUES(1, 15);
+INSERT INTO artist_canta_melodie VALUES(1, 16);
+INSERT INTO artist_canta_melodie VALUES(8, 16);
+INSERT INTO artist_canta_melodie VALUES(1, 17);
+INSERT INTO artist_canta_melodie VALUES(8, 17);
+INSERT INTO artist_canta_melodie VALUES(9, 18);
+INSERT INTO artist_canta_melodie VALUES(7, 18);
+INSERT INTO artist_canta_melodie VALUES(3, 18);
+INSERT INTO artist_canta_melodie VALUES(9, 19);
+INSERT INTO artist_canta_melodie VALUES(6, 19);
+INSERT INTO artist_canta_melodie VALUES(2, 19);
+INSERT INTO artist_canta_melodie VALUES(9, 20);
+INSERT INTO artist_canta_melodie VALUES(6, 20);
+INSERT INTO artist_canta_melodie VALUES(3, 20);
+INSERT INTO artist_canta_melodie VALUES(2, 21);
+INSERT INTO artist_canta_melodie VALUES(7, 21);
+INSERT INTO artist_canta_melodie VALUES(2, 22);
+INSERT INTO artist_canta_melodie VALUES(6, 22);
+INSERT INTO artist_canta_melodie VALUES(2, 23);
+INSERT INTO artist_canta_melodie VALUES(7, 23);
+INSERT INTO artist_canta_melodie VALUES(6, 24);
+INSERT INTO artist_canta_melodie VALUES(4, 24);
+INSERT INTO artist_canta_melodie VALUES(3, 24);
+
+INSERT INTO utilizator_urmareste_artist VALUES(1, 5);
+INSERT INTO utilizator_urmareste_artist VALUES(1, 4);
+INSERT INTO utilizator_urmareste_artist VALUES(1, 3);
+INSERT INTO utilizator_urmareste_artist VALUES(1, 8);
+INSERT INTO utilizator_urmareste_artist VALUES(4, 1);
+INSERT INTO utilizator_urmareste_artist VALUES(4, 2);
+INSERT INTO utilizator_urmareste_artist VALUES(4, 7);
+INSERT INTO utilizator_urmareste_artist VALUES(5, 8);
+INSERT INTO utilizator_urmareste_artist VALUES(5, 5);
+INSERT INTO utilizator_urmareste_artist VALUES(5, 2);
+
+INSERT INTO utilizator_apreciaza_album VALUES(1, 1);
+INSERT INTO utilizator_apreciaza_album VALUES(1, 4);
+INSERT INTO utilizator_apreciaza_album VALUES(1, 3);
+INSERT INTO utilizator_apreciaza_album VALUES(1, 8);
+INSERT INTO utilizator_apreciaza_album VALUES(2, 8);
+INSERT INTO utilizator_apreciaza_album VALUES(2, 3);
+INSERT INTO utilizator_apreciaza_album VALUES(2, 5);
+INSERT INTO utilizator_apreciaza_album VALUES(3, 3);
+INSERT INTO utilizator_apreciaza_album VALUES(4, 3);
+INSERT INTO utilizator_apreciaza_album VALUES(4, 1);
+
+INSERT INTO melodie_apartine_playlist_user VALUES (1, 1, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (2, 1, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (3, 1, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (10, 1, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (11, 1, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (12, 1, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (16, 2, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (21, 2, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (24, 2, 1, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (6, 3, 2, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (7, 3, 2, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (24, 3, 2, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (2, 3, 2, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (21, 4, 4, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (22, 4, 4, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (23, 4, 4, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (8, 4, 4, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (9, 4, 4, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (13, 4, 4, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (4, 5, 5, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (5, 5, 5, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (15, 5, 5, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (16, 5, 5, SYSDATE);
+INSERT INTO melodie_apartine_playlist_user VALUES (17, 5, 5, SYSDATE);
+
+INSERT INTO utilizator_apreciaza_playlist VALUES(1, 3);
+INSERT INTO utilizator_apreciaza_playlist VALUES(1, 4);
+INSERT INTO utilizator_apreciaza_playlist VALUES(1, 5);
+INSERT INTO utilizator_apreciaza_playlist VALUES(5, 1);
+INSERT INTO utilizator_apreciaza_playlist VALUES(5, 2);
+INSERT INTO utilizator_apreciaza_playlist VALUES(5, 3);
+INSERT INTO utilizator_apreciaza_playlist VALUES(4, 1);
+INSERT INTO utilizator_apreciaza_playlist VALUES(3, 1);
+INSERT INTO utilizator_apreciaza_playlist VALUES(3, 2);
+INSERT INTO utilizator_apreciaza_playlist VALUES(3, 3);
+
+alter session set nls_date_format = 'DD-MON-YYYY hh24:mi:ss'; --- ca sa luam si timpu
+
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 1, 3, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 2, 3, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 3, 3, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 4, 3, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 2, 7, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 3, 7, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 3, 9, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 3, 8, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 3, 10, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 2, 3, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 4, 3, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 2, 7, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 3, 1, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 2, 1, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 3, 2, SYSDATE);
+INSERT INTO istoric_ascultare_podcast VALUES (secv_id_asc_podcast.NEXTVAL, 2, 2, SYSDATE);
+
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 6, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 6, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 6, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 6, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 5, 6, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 9, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 7, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 5, 11, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 11, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 2, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 3, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 4, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 2, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 1, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 4, TO_DATE('12-JAN-2022 14:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 16, TO_DATE('1-JUN-2022 14:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 5, TO_DATE('15-FEB-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 4, TO_DATE('5-MAR-2022 12:32:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 4, TO_DATE('1-APR-2022 14:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 13, TO_DATE('4-APR-2022 14:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 4, TO_DATE('1-MAY-2022 16:25:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 19, TO_DATE('4-JUN-2022 16:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 5, TO_DATE('25-JUN-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 5, TO_DATE('18-JUL-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 4, TO_DATE('4-APR-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 4, TO_DATE('20-MAY-2022 18:35:00'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 4, TO_DATE('15-JUN-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 8, TO_DATE('15-JUL-2022 20:35:40'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 8, TO_DATE('16-SEP-2022 10:53:25'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 8, TO_DATE('19-OCT-2022 12:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 8, TO_DATE('12-NOV-2022 18:20:30'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 4, TO_DATE('10-DEC-2022 20:30:20'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 1, TO_DATE('12-JAN-2022 16:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 12, TO_DATE('1-JUN-2022 10:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 22, TO_DATE('15-FEB-2022 12:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 23, TO_DATE('5-MAR-2022 14:32:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 22, TO_DATE('1-APR-2022 15:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 24, TO_DATE('4-APR-2022 17:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 24, TO_DATE('1-MAY-2022 19:25:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 19, TO_DATE('4-JUN-2022 10:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 18, TO_DATE('25-JUN-2022 12:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 18, TO_DATE('18-JUL-2022 19:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 14, TO_DATE('4-APR-2022 12:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 15, TO_DATE('20-MAY-2022 11:35:00'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 14, TO_DATE('15-JUN-2022 17:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 15, TO_DATE('15-JUL-2022 22:35:40'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 12, TO_DATE('16-SEP-2022 23:53:25'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 11, TO_DATE('12-NOV-2022 21:20:30'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 9, TO_DATE('10-DEC-2022 17:30:20'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 2, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 3, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 4, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 5, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 9, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 7, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 5, 13, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 13, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 14, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 15, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 17, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 18, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 1, SYSDATE);
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 4, TO_DATE('12-JAN-2022 14:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 16, TO_DATE('1-JUN-2022 14:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 23, TO_DATE('15-FEB-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 22, TO_DATE('5-MAR-2022 12:32:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 22, TO_DATE('1-APR-2022 14:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 5, 6, TO_DATE('11-APR-2022 15:30:20'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 13, TO_DATE('4-APR-2022 14:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 4, TO_DATE('1-MAY-2022 16:25:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 19, TO_DATE('4-JUN-2022 16:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 5, TO_DATE('25-JUN-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 5, TO_DATE('18-JUL-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 8, TO_DATE('4-APR-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 7, TO_DATE('20-MAY-2022 18:35:00'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 6, TO_DATE('15-JUN-2022 18:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 4, TO_DATE('15-JUL-2022 20:35:40'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 8, TO_DATE('16-SEP-2022 10:53:25'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 8, TO_DATE('19-OCT-2022 12:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 8, TO_DATE('12-NOV-2022 18:20:30'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 4, TO_DATE('10-DEC-2022 20:30:20'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 1, TO_DATE('12-JAN-2022 16:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 23, TO_DATE('1-JUN-2022 10:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 19, TO_DATE('6-JUN-2022 10:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 22, TO_DATE('15-FEB-2022 12:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 23, TO_DATE('5-MAR-2022 14:32:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 22, TO_DATE('1-APR-2022 15:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 24, TO_DATE('4-APR-2022 17:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 24, TO_DATE('1-MAY-2022 19:25:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 19, TO_DATE('4-JUN-2022 10:45:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 18, TO_DATE('25-JUN-2022 12:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 18, TO_DATE('18-JUL-2022 19:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 2, 14, TO_DATE('4-APR-2022 12:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 1, 15, TO_DATE('20-MAY-2022 11:35:00'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 14, TO_DATE('15-JUN-2022 17:35:27'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 15, TO_DATE('15-JUL-2022 22:35:40'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 5, 6, TO_DATE('13-DEC-2022 15:30:20'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 12, TO_DATE('16-SEP-2022 23:53:25'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 3, 11, TO_DATE('12-NOV-2022 21:20:30'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 4, 16, TO_DATE('10-DEC-2022 17:30:20'));
+INSERT INTO istoric_ascultare_melodie VALUES (secv_id_asc_melodie.NEXTVAL, 5, 6, TO_DATE('11-DEC-2022 15:30:20'));

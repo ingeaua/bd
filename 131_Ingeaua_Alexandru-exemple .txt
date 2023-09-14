@@ -1,0 +1,252 @@
+-- EXERCITIUL 12
+
+-- Ex 1:. Pentru fiecare melodie din baza de date să se afișeze durata, dacă aparține unui album sau este o melodie single și anul în care aceasta a fost lansată. 
+-- Rezultatele vor fi ordonate descrescător după durata. Prin single se înțelege o melodie care nu face parte dintr-un album.
+
+-- Element utilizate: NVL și DECODE în cadrul aceleiași cere + CASE + 1 funcție pe dată calendaristică
+
+
+SELECT DISTINCT melodie.titlu, melodie.durata, DECODE(NVL(melodie.id_album, 0), 0, 'Este single', 'Apartine album') AS "Apartenenta album",
+CASE 
+  WHEN melodie.data_lansare IS NOT NULL THEN to_char(melodie.data_lansare, 'YYYY')
+  ELSE to_char(album.data_lansare, 'YYYY')
+END AS "an lansare"   
+FROM melodie, album
+WHERE melodie.id_album = album.id_album OR melodie.id_album IS NULL
+ORDER BY durata DESC;
+
+
+-- Ex 2: Pentru fiecare utilizator al cărui nume are o lungime strict mai mare decât 5 și al cărui nume conține litera "a" (lower/upper case) să se afișeze câte melodii a ascultat fiecare. 
+-- Un utilizator este luat în considerare doar dacă acesta a ascultat mai multe melodii decât utilizatorul care are cele mai puține melodii ascultate. 
+-- Rezultatul urmează sa fie sortat descrescător după numărul de melodii ascultate.
+
+-- Element utilizate: subcerere nesincronizată în clauza FROM + grupări de date cu subcereri nesincronizate în care intervin cel puțin 3 tabele, funcții grup, filtrare la nivel de grupuri (în cadrul aceleiași cereri) + 2 funcții pe șiruri de caractere.
+
+
+SELECT nume AS "Nume utilizator", playuri AS "Numar de melodii ascultate"
+FROM utilizator,(
+    SELECT utilizator.id_utilizator, COUNT(istoric_ascultare_melodie.id_melodie) AS playuri  
+    FROM istoric_ascultare_melodie, melodie, utilizator                                                          
+    WHERE melodie.id_melodie = istoric_ascultare_melodie.id_melodie AND istoric_ascultare_melodie.id_utilizator = utilizator.id_utilizator
+    GROUP BY istoric_ascultare_melodie.id_utilizator                 
+    HAVING COUNT(istoric_ascultare_melodie.id_melodie) 
+    > (SELECT MIN(COUNT(istoric_ascultare_melodie.id_melodie)) AS playuri  
+       FROM istoric_ascultare_melodie, melodie, utilizator                                                          
+       WHERE melodie.id_melodie = istoric_ascultare_melodie.id_melodie AND istoric_ascultare_melodie.id_utilizator = utilizator.id_utilizator
+       GROUP BY istoric_ascultare_melodie.id_utilizator)) aux
+WHERE aux.id_utilizator = utilizator.id_utilizator AND UPPER(utilizator.nume) LIKE '%A%' AND LENGTH(utilizator.nume) > 5
+ORDER BY playuri DESC;
+
+
+-- Ex 3: Pentru fiecare melodie lansată înainte de începerea anului 2020, să se afișeze numele acesteia și data ei de lansare.
+
+-- Element utilizate:  utilizarea cel puțin unui bloc de cerere (clauza WITH) + 1 funcție pe dată calendaristică
+
+
+WITH 
+aux AS (SELECT DISTINCT melodie.titlu,
+        CASE 
+          WHEN melodie.data_lansare IS NOT NULL THEN melodie.data_lansare
+          ELSE album.data_lansare
+        END AS lansare   
+        FROM melodie, album
+        WHERE melodie.id_album = album.id_album OR melodie.id_album IS NULL),
+datacmp AS (SELECT TO_DATE('01-JAN-2020', 'DD-MON-YYYY') AS datatocmp FROM dual)
+SELECT titlu AS "TITLU MELODIE", lansare AS "DATA LANSARE"
+FROM aux, datacmp
+WHERE aux.lansare < datacmp.datatocmp
+ORDER BY lansare;
+
+
+-- Ex 4: Să se afișeze în ordine lexicografică numele artiștilor care au cel puțin o melodie single. 
+-- Prin single se înțelege o melodie care nu face parte dintr-un album.
+
+-- Element utilizate:  subcerere sincronizată în care intervin cel puțin 3 tabele.
+
+
+SELECT nume AS "Nume artist"
+FROM artist 
+WHERE EXISTS
+    (SELECT artist_canta_melodie.id_melodie
+     FROM artist_canta_melodie, 
+     (SELECT id_melodie iduri
+      FROM melodie 
+      WHERE id_album IS NULL) singleuri
+     WHERE id_melodie IN singleuri.iduri 
+     AND artist.id_artist = artist_canta_melodie.id_artist)
+ORDER BY nume;
+
+
+-- Ex 5: Pentru fiecare utilizator să se afișeze cea mai ascultată melodie a acestuia, alături de numărul de ascultări al melodiei de către acel utilizator. 
+-- Rezultatul să fie sortat descrescător după numărul de ascultări.
+
+-- Element utilizate:  -
+
+SELECT utilizator.nume AS "Nume utilizator", melodie.titlu AS "Titlu melodie", playuri  AS "Numar ascultari"
+FROM melodie, utilizator, (
+    SELECT id_utilizator, id_melodie, playuri,   
+       row_number() OVER(PARTITION BY id_utilizator ORDER BY playuri DESC) AS numar_rand
+FROM (
+      SELECT utilizator.id_utilizator, melodie.id_melodie, COUNT(istoric_ascultare_melodie.id_melodie) AS playuri  
+      FROM istoric_ascultare_melodie, melodie, utilizator                                                          
+      WHERE melodie.id_melodie = istoric_ascultare_melodie.id_melodie AND istoric_ascultare_melodie.id_utilizator = utilizator.id_utilizator
+      GROUP BY istoric_ascultare_melodie.id_melodie, istoric_ascultare_melodie.id_utilizator
+      ORDER BY playuri DESC) 
+    ) aux
+WHERE aux.numar_rand = 1 AND melodie.id_melodie = aux.id_melodie AND utilizator.id_utilizator = aux.id_utilizator
+ORDER BY playuri DESC;
+
+
+
+---------------------------------------
+
+-- EXERCITIUL 13
+
+
+-- Operația 1: Ștergeți din tabela MELODIE toate melodiile care au apărut înaintea anului 2021.
+
+delete from melodie
+where id_melodie in (SELECT id_melodie
+                     FROM (SELECT DISTINCT melodie.id_melodie,
+                             CASE 
+                               WHEN melodie.data_lansare IS NOT NULL THEN melodie.data_lansare
+                               ELSE album.data_lansare
+                             END AS lansare   
+                             FROM melodie, album
+                             WHERE melodie.id_album = album.id_album OR melodie.id_album IS NULL)
+                     WHERE lansare < TO_DATE('01-JAN-2021', 'DD-MON-YYYY'));
+
+
+-- Operația 2: Ștergeți din tabela ALBUM toate albumele care nu conțin nicio melodie.
+
+
+delete from album                    
+where id_album not in (select distinct id_album    
+                       		 from melodie
+                      		 where id_album is not null);
+
+
+-- Operația 3: Adăugați un “X” la finalul numelor utilizatorilor care au ascultat mai mult de 10 melodii.
+
+
+update utilizator
+set nume = nume || 'X'
+where id_utilizator in (SELECT utilizator.id_utilizator  
+                        FROM istoric_ascultare_melodie, melodie, utilizator                                                          
+                        WHERE melodie.id_melodie = istoric_ascultare_melodie.id_melodie 
+                        AND istoric_ascultare_melodie.id_utilizator = utilizator.id_utilizator
+                        GROUP BY istoric_ascultare_melodie.id_utilizator        
+                        HAVING COUNT(istoric_ascultare_melodie.id_melodie) > 10);
+
+-- EXERCITIUL 14
+
+-- Creați o vizualizare care să conțină pentru fiecare utilizator: numele tuturor melodiilor ascultate de acestea alături de numărul de ascultări al melodiei respective.
+
+CREATE VIEW vizualizare AS
+SELECT utilizator.nume AS "NUME UTILIZATOR", melodie.titlu AS "TITLU MELODIE",
+COUNT(istoric_ascultare_melodie.id_ascultare_melodie) AS "NUMAR PLAYURI"
+FROM utilizator, melodie, istoric_ascultare_melodie
+WHERE utilizator.id_utilizator = istoric_ascultare_melodie.id_utilizator
+AND istoric_ascultare_melodie.id_melodie = melodie.id_melodie
+GROUP BY utilizator.nume, melodie.titlu
+ORDER BY 3 DESC;
+
+-- Operație LMD permisă:
+
+SELECT * 
+FROM vizualizare
+WHERE "NUMAR PLAYURI" > 2;
+
+-- Operație LMD nepermisă:
+
+UPDATE vizualizare
+SET "NUMAR PLAYURI" = 0
+WHERE "NUMAR PLAYURI" < 3;
+
+-- EXERCITIUL 15
+
+-- Ex1: Să se afișeze numele artiștilor care cânta toate melodiile lansate în anul 2018.
+
+-- Element utilizate:  Division
+
+
+select nume
+from artist
+where id_artist in (
+    with melodie_an as (
+        SELECT DISTINCT melodie.id_melodie, 
+        CASE 
+          WHEN melodie.data_lansare IS NOT NULL THEN to_char(melodie.data_lansare, 'YYYY')
+          ELSE to_char(album.data_lansare, 'YYYY')
+        END AS an_lansare   
+        FROM melodie, album
+        WHERE melodie.id_album = album.id_album OR melodie.id_album IS NULL
+        ORDER BY an_lansare)
+    select id_artist
+    from artist_canta_melodie
+    where id_melodie IN
+            (select id_melodie
+             from melodie_an
+             where an_lansare = 2018) 
+    group by id_artist
+    having count(id_melodie) =
+             (select count(*)
+              from melodie_an
+              where an_lansare = 2018));
+
+
+-- Ex 2: Să se afișeze pentru fiecare utilizator născut înaintea anului 2003 sa se afiseze id-ul acestuia, numele, țara, cât și produsul cartezian dintre playlist-urile și albumele apreciate. 
+-- Pentru playlist-uri și albume se vor afișa doar id-ul și numele acestora.
+
+-- Element utilizate:  Outerjoin pe 4 tabele
+
+
+SELECT u.id_utilizator, u.nume, u.tara, p.id_playlist, p.nume, a.id_album, a.titlu
+FROM utilizator u
+FULL OUTER JOIN utilizator_apreciaza_playlist uap ON u.id_utilizator = uap.id_utilizator
+FULL OUTER JOIN playlist p ON uap.id_playlist = p.id_playlist
+FULL OUTER JOIN utilizator_apreciaza_album uaa ON u.id_utilizator = uaa.id_utilizator
+FULL OUTER JOIN album a ON uaa.id_album = a.id_album
+WHERE u.data_nastere <= TO_DATE('2003-01-01', 'YYYY-MM-DD');
+
+
+-- Ex 3: Să se afișeze melodiile care se află în top 5 cele mai ascultate cât și numărul de ascultări ale acestora.
+
+-- Element utilizate:  Analiza top n
+
+
+WITH statistica_melodii AS (
+SELECT melodie.titlu, COUNT(istoric_ascultare_melodie.id_melodie) AS playuri  
+FROM istoric_ascultare_melodie, melodie                                                          
+WHERE melodie.id_melodie = istoric_ascultare_melodie.id_melodie AND id_album IS NOT NULL
+GROUP BY melodie.titlu
+ORDER BY playuri desc),
+top5 AS (SELECT playuri FROM statistica_melodii WHERE ROWNUM <= 5)
+SELECT * 
+FROM statistica_melodii
+WHERE statistica_melodii.playuri in (SELECT * FROM top5);
+
+
+-- EXERCITIUL 16
+
+-- INAINTE DE OPTIMIZARE
+
+SELECT melodie.titlu, durata, gen, album.titlu
+FROM melodie
+JOIN album ON album.id_album = melodie.id_album
+WHERE album.data_lansare < TO_DATE('01-JAN-2021', 'DD-MON-YYYY') AND melodie.durata > 180;
+
+-- DUPA OPTIMIZARE
+
+SELECT melodie.titlu, durata, gen, album.titlu AS "Titlu album"
+FROM (SELECT titlu, durata, gen, id_album
+      FROM melodie WHERE durata > 180) melodie
+JOIN (SELECT titlu, id_album
+      FROM album WHERE data_lansare < TO_DATE ('01-JAN-2021', 'DD-MON-YYYY')) album
+ON melodie.id_album = album.id_album;
+
+
+
+
+
+
